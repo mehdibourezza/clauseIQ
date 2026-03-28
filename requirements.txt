@@ -1,0 +1,48 @@
+# ML
+torch>=2.0.0
+transformers>=4.40.0
+datasets>=2.19.0
+tokenizers>=0.19.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+wandb>=0.16.0
+
+# PDF parsing
+pdfplumber>=0.11.0
+pypdf>=4.0.0
+
+# API
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+python-multipart>=0.0.9
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Database
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0
+alembic>=1.13.0
+
+# Task queue
+celery>=5.4.0
+redis>=5.0.0
+
+# Storage
+boto3>=1.34.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Utils
+httpx>=0.27.0
+python-dotenv>=1.0.0
+loguru>=0.7.0
+
+# Dev
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+black>=24.0.0
+ruff>=0.4.0
