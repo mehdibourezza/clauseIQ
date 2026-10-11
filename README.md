@@ -26,7 +26,9 @@ A lawyer uploads a contract (PDF or TXT) and sees, for each of the 41 clause typ
 [FastAPI] ── text extraction (pypdf) ──► contracts table (status = processing)
    │ 202 Accepted {id}, then background task
    ▼
-[ClauseExtractor]  interface ── ClaudeExtractor: ONE call, full contract + 41 category definitions
+[ClauseExtractor]  interface (core/)
+   │   ChunkingExtractor (core/): contracts > 400,000 chars are split into overlapping parts
+   │   ClaudeExtractor (engines/): ONE call per part, full text + 41 category definitions
    │ ◄── JSON constrained by a schema: 41 × {clause_type, excerpts[]}
    ▼
 [QuoteVerifier]  every excerpt must exist verbatim in the contract
@@ -44,7 +46,8 @@ Design choices:
 - **Verification, not trust.** An LLM can reword a sentence while presenting it as a quote. Only excerpts found verbatim in the contract are highlighted (whitespace and typographic quotes/dashes are normalised, nothing else; no fuzzy matching). Rejected excerpts are kept and counted, so the model's invention rate is measurable.
 - **One call for 41 categories.** The contract's tokens are paid for once, instead of 41 times.
 - **202 Accepted + polling.** An analysis takes on the order of minutes; the upload returns immediately and the frontend polls the status.
-- **Ports and adapters.** `core/` (extraction, verification, analysis) knows nothing about HTTP or databases. FastAPI and SQLite are adapters around it: the same core can run behind an Azure Function, and the tests plug in a fake extractor.
+- **Ports and adapters.** `core/` (extraction port, chunking, verification, analysis) knows nothing about HTTP, databases or model providers; `tests/test_architecture.py` fails if it ever imports them. FastAPI, SQLite and Claude (`engines/claude.py`) are adapters around it: the same core can run behind an Azure Function, another engine can replace Claude, and the tests plug in a fake extractor.
+- **Long contracts.** Above `LLM_MAX_CHARS_PER_CALL` (default 400,000 characters, above the longest CUAD contract), the contract is extracted in parts that overlap by 4,000 characters (above the longest CUAD annotated clause, 3,884), so every clause appears whole in at least one part. Verification still runs on the full text, so offsets need no adjustment. If one part fails, the whole analysis fails: a partial result would report clauses as absent in text nobody read.
 - **Untrusted input.** The contract is passed as data between `<contract>` tags and the model is told to ignore any instructions it contains.
 
 ### Run Locally
@@ -87,7 +90,7 @@ python -m scripts.export_cuad_samples --n 3
 ### Tests and CI
 
 ```bash
-python -m pytest                                              # 30 backend tests, never call the paid API
+python -m pytest                                              # 38 backend tests, never call the paid API
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
@@ -212,12 +215,15 @@ python -m ml.training.train --epochs 3 --batch-size 16 --freeze-epochs 1
 
 ```
 clauseiq/
-├── core/                         # Business core, framework-independent
+├── core/                         # Business core: no framework, database or model provider
 │   ├── clause_types.py           # The 41 CUAD categories (single source of truth)
-│   ├── extraction.py             # ClauseExtractor interface + ClaudeExtractor
+│   ├── extraction.py             # ClauseExtractor interface (the port)
+│   ├── chunking.py               # Overlapping parts for long contracts (decorator)
 │   ├── verification.py           # QuoteVerifier: verbatim matching → character offsets
 │   ├── analysis.py               # extraction + verification
 │   └── text_extraction.py        # PDF / TXT → text
+├── engines/
+│   └── claude.py                 # ClaudeExtractor: Anthropic API adapter (prompt, schema)
 ├── api/                          # FastAPI adapter
 │   ├── main.py                   # App entry point
 │   ├── v1/routers/contracts.py   # Endpoints

@@ -43,13 +43,14 @@ Transformers.
 │        │                                               jobs.run_analysis │
 └────────┼───────────────────────────────────────────────────────┼────────┘
          │                                                       ▼
-         │                         ┌──────── core/ (framework-independent) ─┐ BUILT
+         │                         ┌──────── core/ (no framework/DB/provider) ┐ BUILT
          │                         │ text_extraction → analysis.analyze_contract
-         │                         │      ├─ ClauseExtractor (port)          │
-         │                         │      │    ├─ ClaudeExtractor ─────────► Anthropic API (external)
-         │                         │      │    └─ Legal-BERT extractor        PLANNED (ml/ has training only)
-         │                         │      └─ QuoteVerifier (verbatim check)  │
-         │                         └────────────────────────────────────────┘
+         │                         │      ├─ ClauseExtractor (port)            │
+         │                         │      │    └─ ChunkingExtractor (decorator: long contracts → parts)
+         │                         │      └─ QuoteVerifier (verbatim check, full text)
+         │                         └──────────────────────────────────────────┘
+         │                         engines/claude.py: ClaudeExtractor ─────► Anthropic API (external)   BUILT
+         │                         Legal-BERT extractor                                                PLANNED (ml/ has training only)
          ▼
 [SQLite: contracts, clause_findings]  data/db/                                BUILT
                                                      
@@ -75,11 +76,20 @@ Deployment (cloud hosting, auth, queue)                                       PL
 - **Key decisions:** scanned PDFs (no text layer) rejected explicitly instead of analysing an empty contract.
 - **Status:** Built. **Last updated:** 2026-10-10
 
-#### Extraction engine (`core/extraction.py`)
-- **Purpose:** One LLM call returns verbatim excerpts for all 41 categories.
-- **Inputs:** contract text. **Outputs:** `ExtractionResult` (dict name → excerpts, model, token counts) or `ExtractionError`.
-- **Key decisions:** `ClauseExtractor` Protocol (port) so engines are swappable; `claude-opus-5-5`, effort `high`, streaming, structured outputs (Pydantic schema, `clause_type` constrained to a 41-value enum), server-side `fallbacks="default"` (beta `server-side-fallback-2026-07-01`); SDK errors translated to `ExtractionError`; contract wrapped in `<contract>` tags with an instruction to ignore embedded instructions (prompt-injection mitigation).
-- **Status:** Built, unit-tested with a stub client; never executed against the real API. **Last updated:** 2026-10-10
+#### Extraction port (`core/extraction.py`)
+- **Purpose:** The contract every engine fulfils: `ClauseExtractor.extract(text) -> ExtractionResult` (dict name → excerpts, model, token counts), or `ExtractionError` (user-facing message).
+- **Key decisions:** a Protocol (port), so engines are swappable; `tests/test_architecture.py` fails if any `core/` module imports FastAPI, SQLAlchemy, anthropic or another app package.
+- **Status:** Built. **Last updated:** 2026-10-11 (Claude adapter moved out to `engines/`)
+
+#### Long-contract chunking (`core/chunking.py`)
+- **Purpose:** `ChunkingExtractor` decorates any `ClauseExtractor`: contracts above `LLM_MAX_CHARS_PER_CALL` (default 400,000 chars) are extracted in parts overlapping by `LLM_CHUNK_OVERLAP_CHARS` (default 4,000), excerpts merged and de-duplicated, tokens summed.
+- **Key decisions:** overlap > longest CUAD annotated clause (3,884 chars) so every clause appears whole in one part (proof in the module docstring); cut points snap left to a line break/space; verification stays on the full text (offsets unchanged); one failed part fails the whole analysis (no misleading "absent"); parts processed sequentially. Longest CUAD contract (338,211 chars): 1 part at default, 4 parts at 100,000.
+- **Status:** Built, 7 tests (`tests/test_chunking.py`). **Last updated:** 2026-10-11
+
+#### Claude engine (`engines/claude.py`)
+- **Purpose:** One Anthropic API call per contract (or per part) returns verbatim excerpts for all 41 categories.
+- **Key decisions:** `claude-opus-5-5`, effort `high`, streaming, structured outputs (Pydantic schema, `clause_type` constrained to a 41-value enum), server-side `fallbacks="default"` (beta `server-side-fallback-2026-07-01`); SDK errors translated to `ExtractionError`; contract wrapped in `<contract>` tags with an instruction to ignore embedded instructions (prompt-injection mitigation).
+- **Status:** Built, unit-tested with a stub client (`tests/test_claude_engine.py`); never executed against the real API. **Last updated:** 2026-10-11
 
 #### Quote verifier (`core/verification.py`)
 - **Purpose:** Prove each excerpt exists in the contract; return offsets in the original text.
@@ -144,6 +154,7 @@ Deployment (cloud hosting, auth, queue)                                       PL
 | 2026-10-11 | `python -m scripts.check_verifier` (102 contracts, 2,643 annotations) | 2,638 located; 5 misses all < 3 chars; 47 (1.8%) first occurrence elsewhere | reproducible command (2026-10-10 figures came from ad-hoc scripts) |
 | 2026-10-11 | Gold extractor v1 of the measure (first occurrence only), 20 contracts seed 0 | P = R = 0.97 | 7 "Document Name" failures: lawyers annotated a later copy of the title → measure fixed |
 | 2026-10-11 | `python -m scripts.evaluate_llm --extractor gold --n 20` (measure v2: all occurrences) | P = 1.0 [0.984, 1.0], R = 1.0 [0.984, 1.0] on 232 annotated clauses, same at thresholds 0.25/0.5/0.75; 3/510 excerpts rejected (< 3 chars) | measurement validated; rules frozen before any LLM run |
+| 2026-10-11 | Backend tests | 38/38 pass | + architecture rule (core imports), + 7 chunking tests |
 | — | LLM evaluation (20 contracts) | not run | estimated ~$0.20/contract, ~1-2 min (unverified) |
 | — | Legal-BERT | never trained | training metric bug: span F1 skips all negative windows (false positives never counted) |
 
@@ -200,6 +211,17 @@ Deployment (cloud hosting, auth, queue)                                       PL
   OVER: any-overlap rule (too lenient), CUAD word-Jaccard >= 0.5 (penalises one-sentence excerpts),
         first-occurrence-only judging (failed 7 "Document Name" cases with the lawyers' own annotations)
   BECAUSE: rules chosen after seeing model results could flatter the model; validated with a perfect extractor first
+
+[2026-10-11] Claude adapter moved out of core/
+  CHOSE: core/extraction.py = port only; engines/claude.py = Anthropic adapter; architecture test on core imports
+  OVER: port and adapter in the same core module
+  BECAUSE: "the core knows neither FastAPI nor Claude" must be literally true and checked automatically
+
+[2026-10-11] Automatic chunking of long contracts (decorator)
+  CHOSE: ChunkingExtractor wrapping any engine; 400,000-char threshold; 4,000-char overlap; fail whole analysis on a failed part
+  OVER: chunking inside ClaudeExtractor; failing cleanly without chunking; partial results
+  BECAUSE: engine-agnostic; threshold above every CUAD contract keeps evaluation unchanged; overlap above the longest
+           CUAD clause guarantees each clause is whole in one part; a partial result would mislead the lawyer
 ```
 
 ---
@@ -248,7 +270,7 @@ Order recommended on 2026-10-11:
 pip install -r requirements-app.txt
 cp .env.example .env                      # set ANTHROPIC_API_KEY
 uvicorn api.main:app --reload --port 8000  # docs: http://localhost:8000/docs
-python -m pytest                          # 30 tests, no API calls
+python -m pytest                          # 38 tests, no API calls
 
 # Frontend (Node 18, Angular 17)
 cd frontend && npm install && npx ng serve            # http://localhost:4200
@@ -264,5 +286,11 @@ python -m scripts.download_cuad && python -m scripts.preprocess_cuad && python -
 ```
 
 Settings (`configs/config.py`, read from `.env`): `ANTHROPIC_API_KEY`, `LLM_MODEL` (default
-`claude-opus-5-5`), `LLM_EFFORT` (default `high`), `REVIEW_DB_URL` (default
-`sqlite:///clauseiq_review.db`).
+`claude-opus-5-5`), `LLM_EFFORT` (default `high`), `LLM_MAX_CHARS_PER_CALL` (default 400000;
+set 100000 to demonstrate chunking on long CUAD contracts), `LLM_CHUNK_OVERLAP_CHARS` (default
+4000), `REVIEW_DB_URL` (default `sqlite:///clauseiq_review.db`).
+
+API credits: Mehdi's Claude Max plan includes monthly API credits ($100 on Max 5x, $200 on
+Max 20x, no rollover), claimed on claude.ai › Settings › Billing › "API credits" by linking a
+Claude Console organization (one organization per plan, not changeable without support). The API
+key in `.env` must belong to that organization.
