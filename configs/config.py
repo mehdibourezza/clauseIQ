@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""          # empty = SDK reads ANTHROPIC_API_KEY from the environment
     llm_model: str = "claude-opus-5-5"
     llm_effort: str = "high"             # low | medium | high | xhigh | max
+    llm_max_chars_per_call: int = 400_000   # longer contracts are split (longest CUAD contract: 338,211)
+    llm_chunk_overlap_chars: int = 4_000    # > longest CUAD annotated clause (3,884 characters)
     review_db_url: str = "sqlite:///clauseiq_review.db"
 
     # Rate limiting (requests per minute per API key)

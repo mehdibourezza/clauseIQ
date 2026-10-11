@@ -12,6 +12,7 @@ import anthropic
 from sqlalchemy.orm import Session, sessionmaker
 
 from configs.config import settings
+from core.chunking import ChunkingExtractor
 from core.extraction import ClauseExtractor
 from data.db.session import make_session_factory
 from engines.claude import ClaudeExtractor
@@ -25,4 +26,8 @@ def get_session_factory() -> sessionmaker[Session]:
 @lru_cache
 def get_extractor() -> ClauseExtractor:
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key or None)
-    return ClaudeExtractor(client, model=settings.llm_model, effort=settings.llm_effort)
+    claude = ClaudeExtractor(client, model=settings.llm_model, effort=settings.llm_effort)
+    # Contracts longer than one call allows are split into overlapping parts (core/chunking.py).
+    return ChunkingExtractor(
+        claude, max_chars=settings.llm_max_chars_per_call, overlap=settings.llm_chunk_overlap_chars
+    )
