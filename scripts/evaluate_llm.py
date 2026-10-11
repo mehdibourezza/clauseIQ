@@ -39,7 +39,13 @@ from core.extraction import ExtractionResult
 from core.verification import QuoteVerifier
 from data.db.models import Contract
 from data.db.session import make_session_factory
-from scripts.eval_metrics import PRIMARY_THRESHOLD, SENSITIVITY_THRESHOLDS, rate, score_contract
+from scripts.eval_metrics import (
+    PRIMARY_THRESHOLD,
+    RULE_INSIDE,
+    SENSITIVITY_THRESHOLDS,
+    rate,
+    score_contract,
+)
 
 CUAD_TEST = Path("ml/data/raw/cuad_extracted/test.json")
 REPORTS_DIR = Path("reports")
@@ -111,14 +117,14 @@ def analyse(cuad: dict, session_factory, extractor) -> dict:
         return record
 
 
-def score(records: list[dict], threshold: float) -> dict:
+def score(records: list[dict], threshold: float, rule: str = RULE_INSIDE) -> dict:
     """Aggregate clause and excerpt outcomes over all analysed contracts."""
     totals = Counter()
     per_type = {name: Counter() for name in CLAUSE_NAMES}
     for record in records:
         excerpts = [(t, [tuple(span) for span in occurrences]) for t, occurrences in record["excerpts"]]
         gold = {t: [tuple(span) for span in spans] for t, spans in record["gold"].items()}
-        for clause_type, counts in score_contract(gold, excerpts, list(CLAUSE_NAMES), threshold).items():
+        for clause_type, counts in score_contract(gold, excerpts, list(CLAUSE_NAMES), threshold, rule).items():
             totals.update(counts)
             per_type[clause_type].update(counts)
 

@@ -37,6 +37,14 @@ Clause-level rule (strict, as in named-entity evaluation):
 Uncertainty: Wilson 95% score interval on every proportion (better than the textbook
 p ± 1.96·sqrt(p(1-p)/n) for small n or p near 0/1). Caveat: the (contract, clause) pairs of one
 contract are not independent, so the intervals are slightly optimistic.
+
+Post-hoc finding (2026-10-11, AFTER the first LLM run, so NOT the primary rule): the rule above
+is asymmetric. When the lawyers annotated a short span inside a longer correct quote (a date
+"May 18, 2010" inside "This agreement ... is entered into as of May 18, 2010"), the quote is
+counted wrong. The gold-extractor validation could not reveal it, since its quotes have exactly
+the annotations' length. RULE_SYMMETRIC is reported as an exploratory analysis only: a quote is
+correct when an occurrence and a same-type annotation overlap on at least t of the SHORTER of
+the two (the overlap coefficient). It should be the pre-registered rule of the next evaluation.
 """
 
 import math
@@ -45,6 +53,8 @@ Span = tuple[int, int]
 
 PRIMARY_THRESHOLD = 0.5
 SENSITIVITY_THRESHOLDS = (0.25, 0.5, 0.75)
+RULE_INSIDE = "inside"          # primary, pre-registered: share of the quote inside annotations
+RULE_SYMMETRIC = "symmetric"    # exploratory, post-hoc: overlap / length of the shorter span
 
 
 def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float, float] | None:
@@ -87,15 +97,33 @@ def inside_fraction(excerpt: Span, gold: list[Span]) -> float:
     return covered / length
 
 
+def overlap_coefficient(a: Span, b: Span) -> float:
+    """Overlap divided by the length of the shorter span (1.0 when one contains the other)."""
+    shorter = min(a[1] - a[0], b[1] - b[0])
+    if shorter <= 0:
+        return 0.0
+    return max(0, min(a[1], b[1]) - max(a[0], b[0])) / shorter
+
+
+def _matches(span: Span, gold: list[Span], threshold: float, rule: str) -> bool:
+    if rule == RULE_SYMMETRIC:
+        return any(overlap_coefficient(span, g) >= threshold for g in gold)
+    return inside_fraction(span, gold) >= threshold
+
+
 def classify_excerpt(
-    occurrences: list[Span], clause_type: str, gold_by_type: dict[str, list[Span]], threshold: float
+    occurrences: list[Span],
+    clause_type: str,
+    gold_by_type: dict[str, list[Span]],
+    threshold: float,
+    rule: str = RULE_INSIDE,
 ) -> str:
     """'correct', 'mislabelled' or 'unsupported' for one excerpt given all its occurrences."""
     own_gold = gold_by_type.get(clause_type, [])
-    if any(inside_fraction(span, own_gold) >= threshold for span in occurrences):
+    if any(_matches(span, own_gold, threshold, rule) for span in occurrences):
         return "correct"
     other_gold = [span for t, spans in gold_by_type.items() if t != clause_type for span in spans]
-    if any(inside_fraction(span, other_gold) >= threshold for span in occurrences):
+    if any(_matches(span, other_gold, threshold, rule) for span in occurrences):
         return "mislabelled"
     return "unsupported"
 
@@ -105,6 +133,7 @@ def score_contract(
     excerpts: list[tuple[str, list[Span]]],
     clause_types: list[str],
     threshold: float,
+    rule: str = RULE_INSIDE,
 ) -> dict[str, dict[str, int]]:
     """
     Per clause type outcome counts for one contract: tp, fn, fp (0/1 each) and excerpt
@@ -114,7 +143,7 @@ def score_contract(
     per_type: dict[str, dict[str, int]] = {}
     for clause_type in clause_types:
         own = [occurrences for t, occurrences in excerpts if t == clause_type]
-        categories = [classify_excerpt(occ, clause_type, gold_by_type, threshold) for occ in own]
+        categories = [classify_excerpt(occ, clause_type, gold_by_type, threshold, rule) for occ in own]
         annotated = bool(gold_by_type.get(clause_type))
         has_correct = "correct" in categories
         per_type[clause_type] = {
