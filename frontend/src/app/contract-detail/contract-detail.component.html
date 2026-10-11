@@ -25,6 +25,7 @@
         {{ contract.clauses_found }} types de clauses trouvés sur {{ clauseTypes().length }}
         · {{ contract.model }}
         · {{ contract.input_tokens | number }} tokens en entrée, {{ contract.output_tokens | number }} en sortie
+        · <span [class.rejected-count]="rejectedCount() > 0">{{ rejectedCount() }} citation(s) rejetée(s)</span>
       </p>
 
       <div class="layout">
@@ -39,7 +40,12 @@
               (click)="select(row.name)"
             >
               <span>{{ row.name }}</span>
-              <span class="count">{{ row.verified.length || '—' }}</span>
+              <span class="count">
+                @if (row.rejected.length > 0) {
+                  <span class="rejected-badge">{{ row.rejected.length }} rejetée(s)</span>
+                }
+                {{ row.verified.length || '—' }}
+              </span>
             </button>
           }
         </nav>

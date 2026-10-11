@@ -61,6 +61,18 @@
 
 .count {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rejected-badge,
+.rejected-count {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.rejected-badge {
+  margin-right: 6px;
+  font-size: 0.75rem;
 }
 
 .selection h3 {

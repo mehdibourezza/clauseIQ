@@ -43,6 +43,9 @@ export class ContractDetailComponent {
 
   readonly selectedRow = computed(() => this.rows().find((r) => r.name === this.selected()) ?? null);
 
+  /** Quotes the model returned but that are not in the contract: never highlighted, always counted. */
+  readonly rejectedCount = computed(() => this.contract()?.findings.filter((f) => !f.verified).length ?? 0);
+
   readonly segments = computed(() => {
     const contract = this.contract();
     return contract?.status === 'done' ? buildSegments(contract.text, contract.findings) : [];
