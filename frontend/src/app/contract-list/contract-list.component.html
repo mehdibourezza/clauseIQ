@@ -1,6 +1,6 @@
 <section class="card">
   <h2>Analyser un contrat</h2>
-  <p class="hint">PDF ou TXT, 10 Mo maximum. L'analyse prend environ une à deux minutes.</p>
+  <p class="hint">PDF ou TXT, 10 Mo maximum. L'analyse prend généralement moins d'une minute.</p>
   <div class="upload">
     <input type="file" accept=".pdf,.txt" (change)="onFileSelected($event)" />
     <button type="button" (click)="upload()" [disabled]="!selectedFile() || uploading()">

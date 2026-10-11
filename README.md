@@ -90,7 +90,7 @@ python -m scripts.export_cuad_samples --n 3
 ### Tests and CI
 
 ```bash
-python -m pytest                                              # 38 backend tests, never call the paid API
+python -m pytest                                              # 41 backend tests, never call the paid API
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
@@ -121,13 +121,31 @@ The script sends CUAD test contracts through the same code path as the app and s
 
 This check caught a flaw in the first version of the measure: it judged only the first occurrence of a quote (the one the app highlights), so 7 "Document Name" cases failed because lawyers had annotated a later copy of the title. Excerpts are now judged on their text, across all occurrences.
 
-LLM results: not run yet.
+**LLM results (2026-10-11).** `python -m scripts.evaluate_llm --n 20 --runs 2`: 20 CUAD test contracts (seed 0, 232 annotated clauses), `claude-opus-5-5`, effort `high`, evaluated twice to measure run-to-run variation. Full report: `reports/eval_claude_20261011_1645.json`.
+
+| Metric (pre-registered rule) | Run 1 | Run 2 |
+|---|---|---|
+| Clause precision | 0.626 [0.569, 0.680] | 0.626 [0.568, 0.680] |
+| Clause recall | 0.780 [0.723, 0.829] | 0.772 [0.713, 0.821] |
+| F1 | 0.695 | 0.691 |
+| Rejected quotes (not found verbatim, never shown) | 0 / 476 (≤ 0.8%) | 0 / 471 (≤ 0.8%) |
+| Shown quotes: correct / mislabelled / unsupported | 0.576 / 0.059 / 0.366 | 0.573 / 0.068 / 0.359 |
+| Mean per contract | 24.8 s, $0.114 | 25.3 s, $0.116 |
+
+How to read it:
+
+- **The model never quoted text that is not in the contract** (0 of 947 quotes over both runs). The verifier stayed a safety net that this sample never triggered.
+- **The two runs agree within 0.01**, well inside the confidence intervals.
+- **Most errors come from how short annotations are scored.** For "Agreement Date", lawyers annotated only the date ("May 18, 2010") while the model quoted the sentence containing it; the pre-registered rule counts that quote as wrong (recall 0.05 on 19 contracts). The rule is asymmetric, and the perfect-extractor check could not reveal it because its quotes have exactly the annotations' length.
+- **Exploratory, post-hoc analysis** (not the official result): with a symmetric rule (a match when the overlap covers at least half of the shorter of quote and annotation), run 1 gives precision 0.723 [0.669, 0.772], recall 0.901 [0.856, 0.933], F1 0.802, stable across thresholds 0.25 to 0.75. Command: `python -m scripts.rescore_eval reports/eval_claude_20261011_1645.json`. This rule should be fixed in advance for the next evaluation.
+- **False alarms are not all errors.** Of the 108 clauses flagged without a correct quote in run 1, 68 concern clauses the lawyers did not annotate in that contract. Spot checks found defensible ones (trademark obligations after expiry, flagged as "Post-Termination Services"); judging them needs a lawyer. The other 40 are annotated clauses quoted at the wrong place.
+- **Limits:** 20 contracts; CUAD has been public since 2021 and may be in the model's training data; these are US English contracts, so the figures do not transfer to French contracts. Re-running this harness on contracts annotated by a firm's own lawyers is the real test.
 
 ### Known Limitations
 
 | Limitation | Why it is acceptable now | Next step |
 |---|---|---|
-| Background task runs in the API process | Single local user | Queue-triggered Azure Function |
+| Background task runs in the API process; analyses interrupted by a restart are marked failed at startup (single-process assumption) | Single local user | Queue-triggered Azure Function, or a lease per job with several instances |
 | SQLite, tables created without migrations | Local prototype | Alembic + Azure SQL |
 | No authentication | Local demo tool | Entra ID single sign-on, per-matter access rights |
 | Scanned PDFs rejected (no OCR) | Demo uses CUAD text contracts | Azure Document Intelligence |

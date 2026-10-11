@@ -157,7 +157,12 @@ Deployment (cloud hosting, auth, queue)                                       PL
 | 2026-10-11 | Backend tests | 38/38 pass | + architecture rule (core imports), + 7 chunking tests |
 | 2026-10-11 | API key check (Max plan included credits) | auth OK, `claude-opus-5-5` reachable; 1-word call 18 in / 5 out tokens, ~$0.0002 | |
 | 2026-10-11 | First real analysis, end to end through the UI (Loha supply agreement, 11,475 chars) | 202 in 0.17 s; done in 16 s; 7,315 in / 2,017 out tokens ≈ $0.070; 10/41 clause types, 14 excerpts, 14 verified, 0 rejected | single contract: says nothing about quality yet |
-| — | LLM evaluation (20 contracts, seed 0, 669,829 chars total) | not run | estimate from the first run: ~$2-3 per pass, ~10-15 min |
+| 2026-10-11 | `python -m scripts.evaluate_llm --n 20 --runs 2` (seed 0, 232 annotated clauses), pre-registered rule | run 1: P 0.626 [0.569, 0.680], R 0.780 [0.723, 0.829], F1 0.695; run 2: P 0.626, R 0.772, F1 0.691 | report `reports/eval_claude_20261011_1645.json`; runs agree within 0.01 |
+| 2026-10-11 | Same, rejected quotes | 0/476 and 0/471 (≤ 0.8% each, Wilson 95%) | the model never quoted text absent from the contract |
+| 2026-10-11 | Same, shown quotes correct / mislabelled / unsupported | run 1: 0.576 / 0.059 / 0.366 | 108 false alarms in run 1 = 68 on clauses not annotated in that contract + 40 annotated but wrong passage |
+| 2026-10-11 | Same, cost and latency | 24.8 s and $0.114 per contract (run 1); $2.27 + $2.32 for both runs; 10.7 to 74.9 s | |
+| 2026-10-11 | Recall per type (pre-registered rule) | Agreement Date 0.05 (n=19), Parties 0.60 (20), Effective Date 0.69 (13), Document Name 0.80 (20); Governing Law, Anti-Assignment, License Grant, Expiration Date 1.0 | short annotations (a date) inside longer correct quotes are scored wrong |
+| 2026-10-11 | `python -m scripts.rescore_eval reports/eval_claude_20261011_1645.json`, symmetric rule (EXPLORATORY, post-hoc) | run 1: P 0.723 [0.669, 0.772], R 0.901 [0.856, 0.933], F1 0.802; flat across thresholds 0.25-0.75 | not the official figure; pre-register this rule next time |
 | — | Legal-BERT | never trained | training metric bug: span F1 skips all negative windows (false positives never counted) |
 
 ---
@@ -214,6 +219,13 @@ Deployment (cloud hosting, auth, queue)                                       PL
         first-occurrence-only judging (failed 7 "Document Name" cases with the lawyers' own annotations)
   BECAUSE: rules chosen after seeing model results could flatter the model; validated with a perfect extractor first
 
+[2026-10-11] Asymmetric rule found AFTER the first LLM run: keep it official, add a labelled post-hoc analysis
+  CHOSE: report the pre-registered rule as the result; add RULE_SYMMETRIC (overlap coefficient) as exploratory,
+         recomputed from the saved report by scripts/rescore_eval.py (no new API call)
+  OVER: silently switching to the rule that scores better
+  BECAUSE: switching rules after seeing results is the "garden of forking paths"; the flaw (short annotations such as
+           dates inside longer correct quotes) was invisible to the perfect-extractor check, whose quotes equal the annotations
+
 [2026-10-11] Claude adapter moved out of core/
   CHOSE: core/extraction.py = port only; engines/claude.py = Anthropic adapter; architecture test on core imports
   OVER: port and adapter in the same core module
@@ -234,7 +246,7 @@ Findings of the 2026-10-11 architecture review (system-architect protocol) inclu
 
 1. **No authentication, no rate limit, no quota.** Fine locally. **Blocks any public deployment**: anyone could trigger paid LLM calls (cost attack) and read every contract.
 2. **POST /contracts is not idempotent.** A double click or retry creates a second contract and a second paid LLM call. Fix: content hash (SHA-256 of the text) + reuse of an existing analysis.
-3. **In-process background tasks.** A restart mid-analysis leaves the row in `processing` forever (no sweeper). Breaks on any deployment with restarts or scale-to-zero. Fix: durable queue + worker, plus a stale-job sweeper.
+3. **In-process background tasks.** A restart mid-analysis loses the job; since 2026-10-11 the row is marked failed at startup (`api.jobs.fail_interrupted_analyses`) instead of staying `processing` forever, but the user must upload again. Assumes a single API process: several instances need a lease per job. Breaks on scale-to-zero platforms. Fix: durable queue + worker.
 4. **SQLite + `create_all`, no migrations.** Breaks on the first schema change with data to keep. Fix: PostgreSQL + Alembic.
 5. **`GET /contracts` unpaginated** and loads every finding of every contract. Fine below ~1,000 contracts. Fix: cursor pagination + aggregate count query.
 6. **No delete / soft delete, no ownership column.** Required before multi-user use.
@@ -254,8 +266,8 @@ Findings of the 2026-10-11 architecture review (system-architect protocol) inclu
 Order recommended on 2026-10-11:
 
 1. **[DONE 2026-10-11] Pre-register the evaluation** (no cost): fix the excerpt↔gold matching rule, define hit / mislabel / unsupported / miss, add per-clause support counts and confidence intervals, plan two runs for variance. Must be done BEFORE seeing LLM results.
-2. Buy Anthropic credit (~$10) → smoke test (1 contract) → evaluation (≥20 contracts, 2 runs) → one-page results note; record metrics here and in README.
-3. Commit `feature/review-app`.
+2. [DONE 2026-10-11] API credits (Max plan) → smoke test → evaluation (20 contracts, 2 runs) → metrics recorded here and in README.
+3. [DONE] Commit `feature/review-app` (small commits).
 4. Code-ownership pass: Mehdi explains every module without the assistant; remove what cannot be explained.
 5. One 30-45 min session with a legal user; fix one thing (likely: distinguish "nothing found, check manually" from "quote rejected"; never display "absent").
 6. Azure DevOps pipeline green on a self-hosted agent (free; the hosted-job grant can take days; Azure DevOps billing does not accept free-trial subscriptions).
@@ -272,7 +284,7 @@ Order recommended on 2026-10-11:
 pip install -r requirements-app.txt
 cp .env.example .env                      # set ANTHROPIC_API_KEY
 uvicorn api.main:app --reload --port 8000  # docs: http://localhost:8000/docs
-python -m pytest                          # 38 tests, no API calls
+python -m pytest                          # 41 tests, no API calls
 
 # Frontend (Node 18, Angular 17)
 cd frontend && npm install && npx ng serve            # http://localhost:4200

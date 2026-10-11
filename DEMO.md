@@ -34,13 +34,13 @@ Fermer tout le reste (notifications, onglets, `.env` jamais affiché à l'écran
 | Temps | Écran | Ce que tu montres | Ce que tu dis |
 |---|---|---|---|
 | 0:00 | Liste des contrats | Les contrats déjà analysés | « Un avocat dépose un contrat et voit, pour 41 types de clauses, la phrase exacte du contrat. » |
-| 0:30 | Dépôt en direct | `samples/Loha…Supply_Agreement.txt`, bouton Analyser | « L'API répond tout de suite (202) ; l'analyse tourne en tâche de fond et la page redemande l'état toutes les 2 secondes. » Mesuré : environ 16 s pour ce contrat. |
+| 0:30 | Dépôt en direct | `samples/Loha…Supply_Agreement.txt`, bouton Analyser | « L'API répond tout de suite (202) ; l'analyse tourne en tâche de fond et la page redemande l'état toutes les 2 secondes. » Mesuré : 16 s et environ 0,07 $ pour ce contrat. |
 | 1:00 | Page du contrat | Clic sur Governing Law, puis Cap On Liability | « Chaque passage surligné a été retrouvé mot pour mot dans le contrat. Le modèle peut se tromper, mais l'outil n'affiche jamais une citation qui n'existe pas. » |
-| 2:00 | Contrat avec une citation rejetée | Clic sur la clause concernée : encadré orange | « Ici le modèle a cité un texte introuvable : il n'est pas surligné, mais il est compté. » (contrat à choisir après l'évaluation) |
-| 3:00 | Terminal | `python -m pytest` | « Les tests remplacent Claude par un faux extracteur : aucun appel payant. Un test vérifie aussi que le cœur n'importe ni FastAPI, ni la base, ni Claude. » |
+| 2:00 | En-tête du contrat : « 0 citation(s) rejetée(s) » | Puis, dans le terminal : `python -m pytest -k reworded` | « Sur 947 citations de l'évaluation, le modèle n'en a inventé aucune. Le vérificateur reste le filet de sécurité, et ce test le prouve : on lui donne une phrase reformulée, il la rejette et la compte. » |
+| 3:00 | Terminal | `python -m pytest` | « 41 tests en une seconde. Ils remplacent Claude par un faux extracteur : aucun appel payant. Un test vérifie aussi que le cœur n'importe ni FastAPI, ni la base, ni Claude. » |
 | 4:00 | Carte d'architecture | Schéma « Qui parle à qui » | Les trois décisions : modèle existant plutôt qu'entraînement, un appel pour 41 clauses, vérification mot pour mot. |
-| 6:00 | `reports/` ou README | Résultats de l'évaluation | « J'ai vérifié la mesure avant de mesurer le modèle » (le défaut « Document Name » trouvé et corrigé), puis les chiffres. |
-| 8:00 | Slide | Industrialisation | Ce qui manque et dans quel ordre : file d'attente, base gérée, authentification et droits par dossier, modèle hébergé dans l'UE, pipeline Azure DevOps exécuté, évaluation sur des contrats annotés par les avocats qui utiliseront l'outil. |
+| 6:00 | README, section Evaluation | Tableau des résultats | « J'ai fixé la règle avant de mesurer et je l'ai testée avec un extracteur parfait, qui a révélé le défaut "Document Name". Résultat sur 20 contrats, deux passages : précision 0,63, rappel 0,78, identiques à 0,01 près. En analysant les erreurs, j'ai vu que les juristes annotent seulement la date, alors que le modèle cite la phrase qui la contient : ma règle était asymétrique. Je ne l'ai pas changée après coup ; l'analyse a posteriori, étiquetée comme telle, donne 0,72 et 0,90. Environ 25 s et 0,11 $ par contrat. » |
+| 8:00 | Slide | Industrialisation | Ce qui manque et dans quel ordre : file d'attente, base gérée, authentification et droits par dossier, modèle hébergé dans l'UE, pipeline Azure DevOps exécuté, évaluation sur des contrats annotés par les avocats qui utiliseront l'outil (CUAD est en anglais, public depuis 2021, peut-être vu par le modèle). |
 
 ---
 
@@ -67,3 +67,15 @@ uvicorn api.main:app --host 127.0.0.1 --port 8000
 
 Le plus long contrat de CUAD (338 211 caractères) part alors en 4 parties. Plus lent et plus cher qu'un
 dépôt normal : à ne faire en direct que si on te le demande.
+
+---
+
+## Si la base de démo est vide
+
+Les contrats pré-analysés vivent dans `clauseiq_review.db` (non versionné). Pour la recréer :
+
+```powershell
+python -m scripts.evaluate_llm --n 5 --save-to-db     # 5 contrats CUAD, environ 0,40 $ et 2 minutes (mesuré le 11/10/2026)
+```
+
+Puis vérifier une fois, Wi-Fi coupé, que la liste et les pages de contrat s'affichent.
