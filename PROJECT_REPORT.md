@@ -155,7 +155,9 @@ Deployment (cloud hosting, auth, queue)                                       PL
 | 2026-10-11 | Gold extractor v1 of the measure (first occurrence only), 20 contracts seed 0 | P = R = 0.97 | 7 "Document Name" failures: lawyers annotated a later copy of the title → measure fixed |
 | 2026-10-11 | `python -m scripts.evaluate_llm --extractor gold --n 20` (measure v2: all occurrences) | P = 1.0 [0.984, 1.0], R = 1.0 [0.984, 1.0] on 232 annotated clauses, same at thresholds 0.25/0.5/0.75; 3/510 excerpts rejected (< 3 chars) | measurement validated; rules frozen before any LLM run |
 | 2026-10-11 | Backend tests | 38/38 pass | + architecture rule (core imports), + 7 chunking tests |
-| — | LLM evaluation (20 contracts) | not run | estimated ~$0.20/contract, ~1-2 min (unverified) |
+| 2026-10-11 | API key check (Max plan included credits) | auth OK, `claude-opus-5-5` reachable; 1-word call 18 in / 5 out tokens, ~$0.0002 | |
+| 2026-10-11 | First real analysis, end to end through the UI (Loha supply agreement, 11,475 chars) | 202 in 0.17 s; done in 16 s; 7,315 in / 2,017 out tokens ≈ $0.070; 10/41 clause types, 14 excerpts, 14 verified, 0 rejected | single contract: says nothing about quality yet |
+| — | LLM evaluation (20 contracts, seed 0, 669,829 chars total) | not run | estimate from the first run: ~$2-3 per pass, ~10-15 min |
 | — | Legal-BERT | never trained | training metric bug: span F1 skips all negative windows (false positives never counted) |
 
 ---
