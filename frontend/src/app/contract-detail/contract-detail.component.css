@@ -1,62 +1,163 @@
-.back {
-  display: inline-block;
-  margin-bottom: 12px;
+.crumbs {
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+}
+
+.crumbs a {
+  color: var(--ink-soft);
 }
 
 .contract-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 14px;
 }
 
-.meta {
-  color: var(--muted);
-  font-size: 0.9rem;
+h1 {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 28px;
+  margin: 12px 0 24px;
+  font-size: 0.875rem;
+}
+
+.facts div {
+  display: flex;
+  gap: 6px;
+}
+
+.facts dt {
+  color: var(--ink-soft);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.rejected,
+.rejected-badge {
+  color: var(--rust);
+}
+
+.progress-panel,
+.failure {
+  max-width: 760px;
+  margin: 16px 0;
+  padding: 14px 18px;
+}
+
+.failure {
+  border-left: 3px solid var(--rust);
+  background: var(--rust-wash);
+  color: var(--rust);
+}
+
+.progress-panel p {
+  margin: 0 0 12px;
+}
+
+/* Indeterminate bar: the analysis has no measurable progress, only "still running". */
+.progress {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background: var(--pen-wash);
+}
+
+.progress::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--pen);
+  animation: slide 1.4s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(290%); }
 }
 
 .layout {
   display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 16px;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 32px;
   align-items: start;
 }
 
+/* Both columns fit the window: the clause list and the sheet scroll on their own. */
+.clauses,
+.document {
+  max-height: calc(100vh - 250px);
+}
+
 .clauses {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh - 220px);
   overflow-y: auto;
+}
+
+.group {
+  margin: 16px 0 6px 13px;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.group:first-child {
+  margin-top: 0;
 }
 
 .clause {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-left: 3px solid transparent;
+  border-radius: 0 4px 4px 0;
   background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.9rem;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-weight: 400;
   text-align: left;
-  cursor: pointer;
+}
+
+/* Found clauses carry a swatch of the same highlighter colour as their passages. */
+.clause::before {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px 5px 3px 4px;
 }
 
 .clause.found {
-  color: var(--text);
+  color: var(--ink);
   font-weight: 500;
 }
 
-.clause:hover {
-  background: var(--surface-hover);
+.clause.found::before {
+  background: var(--marker);
 }
 
-.clause.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+.clause:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.clause.selected,
+.clause.selected:hover:not(:disabled) {
+  border-left-color: var(--pen);
+  background: var(--pen-wash);
+}
+
+.name {
+  flex: 1;
 }
 
 .count {
@@ -64,55 +165,76 @@
   white-space: nowrap;
 }
 
-.rejected-badge,
-.rejected-count {
-  color: var(--warning);
-  font-weight: 600;
-}
-
 .rejected-badge {
   margin-right: 6px;
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
-.selection h3 {
-  margin: 0 0 4px;
+.document {
+  display: flex;
+  flex-direction: column;
+  max-width: 46rem;
 }
 
-.rejected {
-  color: var(--warning);
+.note {
+  flex: none;
+  max-height: 40%;
+  overflow-y: auto;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--pen);
+  background: var(--paper);
+}
+
+.note h3 {
+  font-size: 1rem;
+}
+
+.note p {
+  margin: 4px 0 0;
 }
 
 blockquote {
-  margin: 8px 0;
+  margin: 8px 0 0;
   padding-left: 12px;
-  border-left: 3px solid var(--warning);
-  color: var(--muted);
-  font-style: italic;
+  border-left: 3px solid var(--rust);
+  color: var(--ink-soft);
+  font-family: var(--serif);
 }
 
+/* The contract as a sheet of paper on the desk. */
 .text {
-  max-height: calc(100vh - 220px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  font-family: Georgia, 'Times New Roman', serif;
-  line-height: 1.6;
+  padding: 48px 56px;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgb(19 36 58 / 12%), 0 10px 28px rgb(19 36 58 / 9%);
+  font: 400 1.0625rem/1.75 var(--serif);
   white-space: pre-wrap;
 }
 
+/* Highlighter stroke: uneven ends, and each wrapped line gets its own stroke. */
 mark {
-  background: var(--highlight);
+  margin: 0 -0.08em;
+  padding: 0.02em 0.08em;
+  border-radius: 0.12em 0.3em 0.15em 0.25em;
+  background: var(--marker);
   color: inherit;
   cursor: pointer;
-  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+mark:hover,
+mark.active {
+  background: var(--marker-strong);
 }
 
 mark.active {
-  background: var(--highlight-active);
-  outline: 2px solid var(--accent);
+  text-decoration: underline 2px var(--pen);
+  text-underline-offset: 4px;
 }
 
 @media (max-width: 800px) {
@@ -121,6 +243,15 @@ mark.active {
   }
 
   .clauses {
-    max-height: 240px;
+    max-height: 260px;
+  }
+
+  .document {
+    max-height: none;
+  }
+
+  .text {
+    overflow-y: visible;
+    padding: 24px 20px;
   }
 }

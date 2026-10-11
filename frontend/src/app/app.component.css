@@ -2,26 +2,36 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 16px;
-  padding: 14px 24px;
-  background: var(--brand);
-  color: #fff;
+  gap: 4px 20px;
+  padding: 14px 32px;
+  background: var(--ink);
 }
 
 .brand {
-  color: #fff;
+  color: var(--paper);
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
 }
 
 .tagline {
-  font-size: 0.9rem;
-  opacity: 0.85;
+  color: #c3cedd;
+  font-size: 0.875rem;
 }
 
 main {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 20px 16px 40px;
+  padding: 28px 24px 48px;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  main {
+    padding: 20px 16px 32px;
+  }
 }

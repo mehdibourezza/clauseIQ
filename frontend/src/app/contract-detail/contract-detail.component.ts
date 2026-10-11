@@ -41,6 +41,9 @@ export class ContractDetailComponent {
     return [...rows.filter((r) => r.verified.length > 0), ...rows.filter((r) => r.verified.length === 0)];
   });
 
+  /** Number of found rows: the template starts the "not found" group at this index. */
+  readonly foundCount = computed(() => this.rows().filter((r) => r.verified.length > 0).length);
+
   readonly selectedRow = computed(() => this.rows().find((r) => r.name === this.selected()) ?? null);
 
   /** Quotes the model returned but that are not in the contract: never highlighted, always counted. */

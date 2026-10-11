@@ -26,7 +26,7 @@ export class ContractListComponent implements OnInit {
   ngOnInit(): void {
     this.service.list().subscribe({
       next: (contracts) => this.contracts.set(contracts),
-      error: () => this.error.set("API injoignable : le backend tourne-t-il sur le port 8000 ?"),
+      error: () => this.error.set("Impossible de joindre l'API. Vérifiez qu'elle tourne sur le port 8000."),
     });
   }
 

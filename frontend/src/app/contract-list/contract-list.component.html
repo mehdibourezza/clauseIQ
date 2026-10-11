@@ -1,41 +1,47 @@
-<section class="card">
-  <h2>Analyser un contrat</h2>
-  <p class="hint">PDF ou TXT, 10 Mo maximum. L'analyse prend généralement moins d'une minute.</p>
-  <div class="upload">
-    <input type="file" accept=".pdf,.txt" (change)="onFileSelected($event)" />
+<section class="intake" aria-labelledby="intake-title">
+  <h2 id="intake-title">Analyser un contrat</h2>
+  <div class="intake-row">
+    <label class="file-picker">
+      <input type="file" accept=".pdf,.txt" (change)="onFileSelected($event)" />
+      <span class="file-name">{{ selectedFile()?.name ?? 'Choisir un contrat, PDF ou TXT' }}</span>
+      <span class="file-limit">10 Mo maximum</span>
+    </label>
     <button type="button" (click)="upload()" [disabled]="!selectedFile() || uploading()">
-      {{ uploading() ? 'Envoi…' : 'Analyser' }}
+      {{ uploading() ? 'Envoi…' : 'Analyser le contrat' }}
     </button>
   </div>
+  <p class="hint">L'analyse prend généralement moins d'une minute.</p>
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }
 </section>
 
-<section class="card">
-  <h2>Contrats analysés</h2>
+<section aria-labelledby="registry-title">
+  <h2 id="registry-title">Contrats analysés</h2>
   @if (contracts().length === 0) {
-    <p class="hint">Aucun contrat pour l'instant.</p>
+    <p class="empty hint">Aucun contrat analysé pour l'instant. Déposez un premier contrat ci-dessus.</p>
   } @else {
-    <table>
-      <thead>
-        <tr>
-          <th>Fichier</th>
-          <th>Déposé le</th>
-          <th>Statut</th>
-          <th class="number">Types de clauses trouvés</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (contract of contracts(); track contract.id) {
-          <tr [routerLink]="['/contracts', contract.id]">
-            <td>{{ contract.filename }}</td>
-            <td>{{ contract.created_at | date: 'short' }}</td>
-            <td><span [class]="'status ' + contract.status">{{ statusLabels[contract.status] }}</span></td>
-            <td class="number">{{ contract.status === 'done' ? contract.clauses_found : '—' }}</td>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>Fichier</th>
+            <th>Déposé le</th>
+            <th>Statut</th>
+            <th class="number">Types de clauses trouvés</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (contract of contracts(); track contract.id) {
+            <tr [routerLink]="['/contracts', contract.id]">
+              <td><a class="file-link" [routerLink]="['/contracts', contract.id]">{{ contract.filename }}</a></td>
+              <td class="date">{{ contract.created_at | date: 'short' }}</td>
+              <td><span [class]="'status ' + contract.status">{{ statusLabels[contract.status] }}</span></td>
+              <td class="number">{{ contract.status === 'done' ? contract.clauses_found : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
 </section>

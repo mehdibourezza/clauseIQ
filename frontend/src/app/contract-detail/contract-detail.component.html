@@ -1,4 +1,4 @@
-<a routerLink="/" class="back">← Tous les contrats</a>
+<nav class="crumbs" aria-label="Fil d'Ariane"><a routerLink="/">Contrats analysés</a></nav>
 
 @if (loadError()) {
   <p class="error">{{ loadError() }}</p>
@@ -6,40 +6,50 @@
 
 @if (contract(); as contract) {
   <header class="contract-header">
-    <h2>{{ contract.filename }}</h2>
+    <h1>{{ contract.filename }}</h1>
     <span [class]="'status ' + contract.status">{{ statusLabels[contract.status] }}</span>
   </header>
 
   @switch (contract.status) {
     @case ('processing') {
-      <p class="card hint">
-        Analyse en cours : le modèle lit le contrat et cherche les {{ clauseTypes().length }} types de clauses.
-        Comptez généralement moins d'une minute.
-      </p>
+      <div class="panel progress-panel" role="status">
+        <p>
+          Analyse en cours : le modèle lit le contrat et cherche les {{ clauseTypes().length }} types de clauses.
+          Comptez généralement moins d'une minute.
+        </p>
+        <div class="progress" aria-hidden="true"></div>
+      </div>
     }
     @case ('failed') {
-      <p class="card error">{{ contract.error }}</p>
+      <p class="failure">{{ contract.error }}</p>
     }
     @case ('done') {
-      <p class="meta">
-        {{ contract.clauses_found }} types de clauses trouvés sur {{ clauseTypes().length }}
-        · {{ contract.model }}
-        · {{ contract.input_tokens | number }} tokens en entrée, {{ contract.output_tokens | number }} en sortie
-        · <span [class.rejected-count]="rejectedCount() > 0">{{ rejectedCount() }} citation(s) rejetée(s)</span>
-      </p>
+      <dl class="facts">
+        <div><dt>Types de clauses trouvés</dt><dd>{{ contract.clauses_found }} sur {{ clauseTypes().length }}</dd></div>
+        <div><dt>Citations rejetées</dt><dd [class.rejected]="rejectedCount() > 0">{{ rejectedCount() }}</dd></div>
+        <div><dt>Modèle</dt><dd>{{ contract.model }}</dd></div>
+        <div><dt>Tokens</dt><dd>{{ contract.input_tokens | number }} en entrée, {{ contract.output_tokens | number }} en sortie</dd></div>
+      </dl>
 
       <div class="layout">
         <nav class="clauses" aria-label="Types de clauses">
-          @for (row of rows(); track row.name) {
+          @for (row of rows(); track row.name; let i = $index) {
+            @if (i === 0) {
+              <h2 class="group">Trouvées ({{ foundCount() }})</h2>
+            }
+            @if (i === foundCount()) {
+              <h2 class="group">Non trouvées par le modèle ({{ rows().length - foundCount() }})</h2>
+            }
             <button
               type="button"
               class="clause"
               [class.found]="row.verified.length > 0"
               [class.selected]="row.name === selected()"
+              [attr.aria-pressed]="row.name === selected()"
               [title]="row.description"
               (click)="select(row.name)"
             >
-              <span>{{ row.name }}</span>
+              <span class="name">{{ row.name }}</span>
               <span class="count">
                 @if (row.rejected.length > 0) {
                   <span class="rejected-badge">{{ row.rejected.length }} rejetée(s)</span>
@@ -52,11 +62,11 @@
 
         <section class="document">
           @if (selectedRow(); as row) {
-            <div class="selection card">
+            <aside class="note">
               <h3>{{ row.name }}</h3>
               <p class="hint">{{ row.description }}</p>
               @if (row.verified.length === 0) {
-                <p>Clause non trouvée dans ce contrat.</p>
+                <p>Le modèle n'a trouvé aucun passage pour cette clause, ce qui ne prouve pas qu'elle est absente.</p>
               }
               @if (row.rejected.length > 0) {
                 <p class="rejected">
@@ -67,7 +77,9 @@
                   <blockquote>{{ finding.quote }}</blockquote>
                 }
               }
-            </div>
+            </aside>
+          } @else {
+            <p class="note hint">Choisissez une clause dans la liste pour aller à ses passages surlignés.</p>
           }
 
           <div class="text">@for (segment of segments(); track $index) {@if (segment.clauseTypes.length) {<mark [id]="'seg-' + $index" [class.active]="isActive(segment)" [title]="segment.clauseTypes.join(', ')" (click)="select(segment.clauseTypes[0])">{{ segment.text }}</mark>} @else {<span>{{ segment.text }}</span>}}</div>

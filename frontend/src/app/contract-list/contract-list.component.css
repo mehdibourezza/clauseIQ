@@ -1,37 +1,126 @@
-.upload {
+h2 {
+  margin-bottom: 12px;
+  font-size: 1.125rem;
+}
+
+.intake {
+  margin-bottom: 40px;
+}
+
+.intake-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  align-items: center;
+  max-width: 760px;
 }
 
+/* The native file input stays in the label (keyboard and screen readers) but is visually hidden. */
+.file-picker {
+  position: relative;
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 6px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.file-picker:hover {
+  border-color: var(--pen);
+}
+
+.file-picker:focus-within {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
+}
+
+.file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.file-limit {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.intake .hint {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+}
+
+.empty {
+  padding: 28px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 6px;
+}
+
+.panel {
+  overflow-x: auto;
+}
+
+/* On a phone the table scrolls sideways inside its panel instead of crushing the file names. */
 table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
   text-align: left;
 }
 
 th {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
 tbody tr {
   cursor: pointer;
 }
 
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
 tbody tr:hover {
-  background: var(--surface-hover);
+  background: var(--hover);
+}
+
+.file-link {
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+tr:hover .file-link {
+  color: var(--pen);
+  text-decoration: underline;
+}
+
+.date {
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .number {
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }

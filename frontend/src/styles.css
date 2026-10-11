@@ -1,18 +1,38 @@
+/* Fonts are bundled in assets/fonts (SIL Open Font License) so the app looks the same offline. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('/assets/fonts/ibm-plex-sans-latin.woff2') format('woff2');
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Serif 4';
+  src: url('/assets/fonts/source-serif-4-latin.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+/* The app speaks in sans; the contract itself is set in serif. */
 :root {
-  --brand: #0b2a4a;
-  --accent: #2f6fde;
-  --accent-soft: #e8f0fd;
-  --text: #1c2430;
-  --muted: #5d6b7c;
-  --border: #dde3ea;
-  --surface: #ffffff;
-  --surface-hover: #f3f6f9;
-  --background: #f6f8fa;
-  --highlight: #fff1a8;
-  --highlight-active: #ffd84d;
-  --warning: #b35c00;
-  --danger: #b42318;
-  --success: #1a7f37;
+  --ink: #13243a;
+  --ink-soft: #4a5a70;
+  --desk: #e6eaf0;
+  --paper: #ffffff;
+  --rule: #cfd6e0;
+  --rule-strong: #9aa7b8;
+  --hover: #edf0f5;
+  --marker: #ffe95c;
+  --marker-strong: #ffd21f;
+  --pen: #1f4fa3;
+  --pen-deep: #183f85;
+  --pen-wash: #e3ebf8;
+  --rust: #a4471b;
+  --rust-wash: #f8e9e1;
+  --verified: #2f6b1f;
+  --verified-wash: #e5f0de;
+  --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
 }
 
 * {
@@ -21,48 +41,59 @@
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--desk);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 a {
-  color: var(--accent);
+  color: var(--pen);
+  text-underline-offset: 3px;
 }
 
-h2 {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
-}
-
-.card {
-  margin: 0 0 16px;
-  padding: 16px 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+:focus-visible {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
 }
 
 .hint {
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 
 .error {
-  color: var(--danger);
+  color: var(--rust);
+}
+
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
 }
 
 button {
-  padding: 8px 18px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
+  border-radius: 4px;
+  background: var(--pen);
+  color: var(--paper);
+  font: 500 0.9375rem var(--sans);
   cursor: pointer;
 }
 
+button:hover:not(:disabled) {
+  background: var(--pen-deep);
+}
+
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -70,21 +101,32 @@ button:disabled {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .status.processing {
-  background: #fff4e0;
-  color: var(--warning);
+  background: var(--pen-wash);
+  color: var(--pen);
 }
 
 .status.done {
-  background: #e6f4ea;
-  color: var(--success);
+  background: var(--verified-wash);
+  color: var(--verified);
 }
 
 .status.failed {
-  background: #fde8e7;
-  color: var(--danger);
+  background: var(--rust-wash);
+  color: var(--rust);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
