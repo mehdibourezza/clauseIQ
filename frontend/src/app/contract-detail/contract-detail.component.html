@@ -1,0 +1,72 @@
+<a routerLink="/" class="back">← Tous les contrats</a>
+
+@if (loadError()) {
+  <p class="error">{{ loadError() }}</p>
+}
+
+@if (contract(); as contract) {
+  <header class="contract-header">
+    <h2>{{ contract.filename }}</h2>
+    <span [class]="'status ' + contract.status">{{ statusLabels[contract.status] }}</span>
+  </header>
+
+  @switch (contract.status) {
+    @case ('processing') {
+      <p class="card hint">
+        Analyse en cours : le modèle lit le contrat et cherche les {{ clauseTypes().length }} types de clauses.
+        Comptez une à deux minutes.
+      </p>
+    }
+    @case ('failed') {
+      <p class="card error">{{ contract.error }}</p>
+    }
+    @case ('done') {
+      <p class="meta">
+        {{ contract.clauses_found }} types de clauses trouvés sur {{ clauseTypes().length }}
+        · {{ contract.model }}
+        · {{ contract.input_tokens | number }} tokens en entrée, {{ contract.output_tokens | number }} en sortie
+      </p>
+
+      <div class="layout">
+        <nav class="clauses" aria-label="Types de clauses">
+          @for (row of rows(); track row.name) {
+            <button
+              type="button"
+              class="clause"
+              [class.found]="row.verified.length > 0"
+              [class.selected]="row.name === selected()"
+              [title]="row.description"
+              (click)="select(row.name)"
+            >
+              <span>{{ row.name }}</span>
+              <span class="count">{{ row.verified.length || '—' }}</span>
+            </button>
+          }
+        </nav>
+
+        <section class="document">
+          @if (selectedRow(); as row) {
+            <div class="selection card">
+              <h3>{{ row.name }}</h3>
+              <p class="hint">{{ row.description }}</p>
+              @if (row.verified.length === 0) {
+                <p>Clause non trouvée dans ce contrat.</p>
+              }
+              @if (row.rejected.length > 0) {
+                <p class="rejected">
+                  {{ row.rejected.length }} citation(s) rejetée(s) : introuvable(s) mot pour mot dans le contrat,
+                  donc jamais surlignée(s).
+                </p>
+                @for (finding of row.rejected; track $index) {
+                  <blockquote>{{ finding.quote }}</blockquote>
+                }
+              }
+            </div>
+          }
+
+          <div class="text">@for (segment of segments(); track $index) {@if (segment.clauseTypes.length) {<mark [id]="'seg-' + $index" [class.active]="isActive(segment)" [title]="segment.clauseTypes.join(', ')" (click)="select(segment.clauseTypes[0])">{{ segment.text }}</mark>} @else {<span>{{ segment.text }}</span>}}</div>
+        </section>
+      </div>
+    }
+  }
+}

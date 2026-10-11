@@ -1,0 +1,41 @@
+<section class="card">
+  <h2>Analyser un contrat</h2>
+  <p class="hint">PDF ou TXT, 10 Mo maximum. L'analyse prend environ une à deux minutes.</p>
+  <div class="upload">
+    <input type="file" accept=".pdf,.txt" (change)="onFileSelected($event)" />
+    <button type="button" (click)="upload()" [disabled]="!selectedFile() || uploading()">
+      {{ uploading() ? 'Envoi…' : 'Analyser' }}
+    </button>
+  </div>
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+</section>
+
+<section class="card">
+  <h2>Contrats analysés</h2>
+  @if (contracts().length === 0) {
+    <p class="hint">Aucun contrat pour l'instant.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Fichier</th>
+          <th>Déposé le</th>
+          <th>Statut</th>
+          <th class="number">Types de clauses trouvés</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (contract of contracts(); track contract.id) {
+          <tr [routerLink]="['/contracts', contract.id]">
+            <td>{{ contract.filename }}</td>
+            <td>{{ contract.created_at | date: 'short' }}</td>
+            <td><span [class]="'status ' + contract.status">{{ statusLabels[contract.status] }}</span></td>
+            <td class="number">{{ contract.status === 'done' ? contract.clauses_found : '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
