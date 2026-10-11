@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     max_sequence_length: int = 512
     inference_batch_size: int = 8
 
+    # Contract review app (LLM extraction engine)
+    anthropic_api_key: str = ""          # empty = SDK reads ANTHROPIC_API_KEY from the environment
+    llm_model: str = "claude-opus-5-5"
+    llm_effort: str = "high"             # low | medium | high | xhigh | max
+    review_db_url: str = "sqlite:///clauseiq_review.db"
+
     # Rate limiting (requests per minute per API key)
     rate_limit_free: int = 10
     rate_limit_pro: int = 100

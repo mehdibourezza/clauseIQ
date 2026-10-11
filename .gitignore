@@ -61,3 +61,11 @@ frontend/out/
 
 # Alembic
 alembic/versions/__pycache__/
+
+# Contract review app
+clauseiq_review.db
+samples/
+frontend/dist/
+frontend/.angular/
+test-results/
+reports/eval_gold_*.json
