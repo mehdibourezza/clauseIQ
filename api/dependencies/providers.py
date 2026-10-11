@@ -12,8 +12,9 @@ import anthropic
 from sqlalchemy.orm import Session, sessionmaker
 
 from configs.config import settings
-from core.extraction import ClaudeExtractor, ClauseExtractor
+from core.extraction import ClauseExtractor
 from data.db.session import make_session_factory
+from engines.claude import ClaudeExtractor
 
 
 @lru_cache

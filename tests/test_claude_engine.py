@@ -5,13 +5,8 @@ from types import SimpleNamespace
 import pytest
 
 from core.clause_types import CLAUSE_NAMES
-from core.extraction import (
-    SYSTEM_PROMPT,
-    CategoryExcerpts,
-    ClaudeExtractor,
-    ExtractionError,
-    ExtractionOutput,
-)
+from core.extraction import ExtractionError
+from engines.claude import SYSTEM_PROMPT, CategoryExcerpts, ClaudeExtractor, ExtractionOutput
 
 
 class _StubStream:
