@@ -16,7 +16,7 @@ is verified verbatim against the contract text before display, so the tool never
 sentence the contract does not contain.
 
 Two extraction engines behind one interface (`core.extraction.ClauseExtractor`):
-- **LLM engine** (Claude via the Anthropic API, structured outputs): built, used by the app, not yet run for real (API credit exhausted on 2026-10-10).
+- **LLM engine** (Claude via the Anthropic API, structured outputs): built, used by the app, evaluated on 20 CUAD test contracts (2026-10-11, section 4).
 - **Legal-BERT engine** (fine-tuned extractive question answering): training pipeline built in March 2026, model never trained, no inference code.
 
 Context: portfolio project of Mehdi Bourezza, built with Python, TypeScript/Angular and SQL,
@@ -27,7 +27,7 @@ Angular 17.3 / TypeScript 5.4 (Node 18.17), pytest, Karma/Jasmine. Legal-BERT si
 Transformers.
 
 **Repository:** https://github.com/mehdibourezza/clauseIQ. Working branch:
-`feature/review-app` (uncommitted as of 2026-10-11).
+`feature/review-app` (committed, not pushed as of 2026-10-11).
 
 ---
 
@@ -54,7 +54,7 @@ Transformers.
          ▼
 [SQLite: contracts, clause_findings]  data/db/                                BUILT
                                                      
-[scripts/evaluate_llm.py] ── same job path ── compares with CUAD annotations  BUILT (never run with the LLM)
+[scripts/evaluate_llm.py] ── same job path ── compares with CUAD annotations  BUILT, run with the LLM (20 contracts × 2)
 [ml/] Legal-BERT data prep + training loop                                    BUILT, never trained
 [azure-pipelines.yml] tests + frontend build                                  WRITTEN, never executed
 Deployment (cloud hosting, auth, queue)                                       PLANNED
@@ -89,7 +89,7 @@ Deployment (cloud hosting, auth, queue)                                       PL
 #### Claude engine (`engines/claude.py`)
 - **Purpose:** One Anthropic API call per contract (or per part) returns verbatim excerpts for all 41 categories.
 - **Key decisions:** `claude-opus-5-5`, effort `high`, streaming, structured outputs (Pydantic schema, `clause_type` constrained to a 41-value enum), server-side `fallbacks="default"` (beta `server-side-fallback-2026-07-01`); SDK errors translated to `ExtractionError`; contract wrapped in `<contract>` tags with an instruction to ignore embedded instructions (prompt-injection mitigation).
-- **Status:** Built, unit-tested with a stub client (`tests/test_claude_engine.py`); never executed against the real API. **Last updated:** 2026-10-11
+- **Status:** Built, unit-tested with a stub client (`tests/test_claude_engine.py`); run against the real API for the 2026-10-11 evaluation. **Last updated:** 2026-10-11
 
 #### Quote verifier (`core/verification.py`)
 - **Purpose:** Prove each excerpt exists in the contract; return offsets in the original text.
@@ -119,7 +119,7 @@ Deployment (cloud hosting, auth, queue)                                       PL
 
 #### Evaluation (`scripts/evaluate_llm.py`)
 - **Purpose:** Run N CUAD test contracts through `jobs.run_analysis` and score against lawyer annotations: presence precision/recall/F1 (overall + per type), grounding rate, on-target rate, cost, latency; JSON report in `reports/`. `--save-to-db` keeps results in the app DB (offline demo).
-- **Status:** Built; validated with a gold extractor; never run with the LLM. **Last updated:** 2026-10-10
+- **Status:** Built; validated with a gold extractor; run with the LLM on 2026-10-11 (section 4). **Last updated:** 2026-10-11
 
 #### Scoring rules (`scripts/eval_metrics.py`) and verifier check (`scripts/check_verifier.py`)
 - **Purpose:** Pre-registered matching rules (excerpt correct if ≥ 50% of its characters lie in a gold span of the same type, judged over all occurrences of its text; strict clause rule: wrong passage = false alarm + miss), Wilson 95% intervals, sensitivity thresholds 0.25/0.5/0.75. `check_verifier` reproduces the verifier figures on all CUAD test annotations.

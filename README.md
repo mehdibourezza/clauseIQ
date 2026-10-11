@@ -45,7 +45,7 @@ Design choices:
 
 - **Verification, not trust.** An LLM can reword a sentence while presenting it as a quote. Only excerpts found verbatim in the contract are highlighted (whitespace and typographic quotes/dashes are normalised, nothing else; no fuzzy matching). Rejected excerpts are kept and counted, so the model's invention rate is measurable.
 - **One call for 41 categories.** The contract's tokens are paid for once, instead of 41 times.
-- **202 Accepted + polling.** An analysis takes on the order of minutes; the upload returns immediately and the frontend polls the status.
+- **202 Accepted + polling.** An analysis takes tens of seconds (25 s on average over 20 CUAD contracts, see Evaluation); the upload returns immediately and the frontend polls the status.
 - **Ports and adapters.** `core/` (extraction port, chunking, verification, analysis) knows nothing about HTTP, databases or model providers; `tests/test_architecture.py` fails if it ever imports them. FastAPI, SQLite and Claude (`engines/claude.py`) are adapters around it: the same core can run behind an Azure Function, another engine can replace Claude, and the tests plug in a fake extractor.
 - **Long contracts.** Above `LLM_MAX_CHARS_PER_CALL` (default 400,000 characters, above the longest CUAD contract), the contract is extracted in parts that overlap by 4,000 characters (above the longest CUAD annotated clause, 3,884), so every clause appears whole in at least one part. Verification still runs on the full text, so offsets need no adjustment. If one part fails, the whole analysis fails: a partial result would report clauses as absent in text nobody read.
 - **Untrusted input.** The contract is passed as data between `<contract>` tags and the model is told to ignore any instructions it contains.
@@ -158,6 +158,8 @@ How to read it:
 
 Extractive question answering: given a contract and a clause type, the model predicts the start and end token of the answer span, so it returns exact text, not generated summaries.
 
+Illustration of the input and output format (the model has not been trained, so these values are not real predictions):
+
 ```
 Input:  contract text + "Does this contract contain a Cap on Liability clause?"
 Output: "In no event shall either party's total liability exceed $500,000."
@@ -201,7 +203,7 @@ Requires `requirements.txt` (PyTorch, Transformers...) and a GPU for training.
 ```bash
 python -m scripts.download_cuad      # 408 training contracts + 22,450 labeled QA pairs (~18MB) into ml/data/raw/
 python -m scripts.preprocess_cuad    # sliding-window features into ml/data/processed/ (~4GB, 20-40 min)
-python -m ml.training.train          # GPU required; ~3-5 hours on a Colab T4
+python -m ml.training.train          # GPU required; never run to completion, duration not measured
 ```
 
 Custom options:
@@ -219,10 +221,10 @@ python -m ml.training.train --epochs 3 --batch-size 16 --freeze-epochs 1
 - [x] Contract review app: FastAPI backend, Angular frontend, LLM extraction engine with verbatim verification
 - [x] Backend and frontend tests; Azure DevOps pipeline definition
 - [x] Evaluation script against CUAD lawyer annotations (measurement validated)
+- [x] LLM evaluation on 20 CUAD test contracts, two runs (2026-10-11, see Evaluation)
 - [x] Legal-BERT data pipeline, model architecture and two-phase training loop
 
 ### Not Done
-- [ ] LLM evaluation run on CUAD
 - [ ] Legal-BERT training run (weights not saved yet) and its inference engine
 - [ ] Deployment (Docker, Azure), authentication, OCR
 - [ ] Portfolio queries ("all contracts without a liability cap")
