@@ -8,6 +8,7 @@ here it runs in FastAPI's background task pool (lost if the server restarts mid-
 import logging
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.analysis import analyze_contract
@@ -50,3 +51,25 @@ def run_analysis(contract_id: str, session_factory: sessionmaker[Session], extra
 
         contract.completed_at = datetime.now(timezone.utc)
         db.commit()
+
+
+INTERRUPTED_MESSAGE = "Analysis interrupted by a server restart. Upload the contract again."
+
+
+def fail_interrupted_analyses(session_factory: sessionmaker[Session]) -> int:
+    """
+    Called at API startup. Background tasks die with the process, so with a single API process
+    every contract still "processing" at startup was interrupted: mark it failed instead of
+    leaving it stuck forever. With several API instances this would also fail the others'
+    in-flight jobs; that setup needs a lease per job (or a durable queue) instead.
+    """
+    with session_factory() as db:
+        stuck = db.scalars(select(Contract).where(Contract.status == "processing")).all()
+        for contract in stuck:
+            contract.status = "failed"
+            contract.error = INTERRUPTED_MESSAGE
+            contract.completed_at = datetime.now(timezone.utc)
+        db.commit()
+    if stuck:
+        logger.warning("Marked %d interrupted analyses as failed", len(stuck))
+    return len(stuck)

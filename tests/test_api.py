@@ -72,6 +72,31 @@ def test_list_returns_most_recent_first(client):
     assert ids.index(second) < ids.index(first)
 
 
+def test_startup_marks_interrupted_analyses_as_failed(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.dependencies.providers import get_session_factory
+    from api.jobs import INTERRUPTED_MESSAGE
+    from api.main import create_app
+    from data.db.models import Contract
+    from data.db.session import make_session_factory
+
+    session_factory = make_session_factory(f"sqlite:///{tmp_path / 'restart.db'}")
+    with session_factory() as db:
+        db.add(Contract(id="stuck", filename="a.txt", text="text", status="processing"))
+        db.add(Contract(id="finished", filename="b.txt", text="text", status="done"))
+        db.commit()
+
+    app = create_app()
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
+    with TestClient(app) as client:   # entering the context runs the startup (lifespan) code
+        stuck = client.get("/api/v1/contracts/stuck").json()
+        finished = client.get("/api/v1/contracts/finished").json()
+
+    assert stuck["status"] == "failed" and stuck["error"] == INTERRUPTED_MESSAGE
+    assert finished["status"] == "done"
+
+
 def test_clause_types_endpoint_lists_the_catalogue(client):
     clause_types = client.get("/api/v1/clause-types").json()
     assert len(clause_types) == 41
