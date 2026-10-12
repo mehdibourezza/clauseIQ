@@ -163,6 +163,7 @@ Deployment (cloud hosting, auth, queue)                                       PL
 | 2026-10-11 | Same, cost and latency | 24.8 s and $0.114 per contract (run 1); $2.27 + $2.32 for both runs; 10.7 to 74.9 s | |
 | 2026-10-11 | Recall per type (pre-registered rule) | Agreement Date 0.05 (n=19), Parties 0.60 (20), Effective Date 0.69 (13), Document Name 0.80 (20); Governing Law, Anti-Assignment, License Grant, Expiration Date 1.0 | short annotations (a date) inside longer correct quotes are scored wrong |
 | 2026-10-11 | `python -m scripts.rescore_eval reports/eval_claude_20261011_1645.json`, symmetric rule (EXPLORATORY, post-hoc) | run 1: P 0.723 [0.669, 0.772], R 0.901 [0.856, 0.933], F1 0.802; flat across thresholds 0.25-0.75 | not the official figure; pre-register this rule next time |
+| 2026-10-12 | French contract through the UI (CeCILL v2.1 licence, public, 22,961 bytes) | done in 28 s; 12,601 in / 3,575 out tokens ≈ $0.12; 12/41 clause types, 19 excerpts, 19 verified, 0 rejected | single contract: shows French text and typography pass verification, says nothing about quality in French; one questionable label (access-to-source clause under "Price Restrictions") |
 | — | Legal-BERT | never trained | training metric bug: span F1 skips all negative windows (false positives never counted) |
 
 ---
@@ -248,7 +249,7 @@ Findings of the 2026-10-11 architecture review (system-architect protocol) inclu
 2. **POST /contracts is not idempotent.** A double click or retry creates a second contract and a second paid LLM call. Fix: content hash (SHA-256 of the text) + reuse of an existing analysis.
 3. **In-process background tasks.** A restart mid-analysis loses the job; since 2026-10-11 the row is marked failed at startup (`api.jobs.fail_interrupted_analyses`) instead of staying `processing` forever, but the user must upload again. Assumes a single API process: several instances need a lease per job. Breaks on scale-to-zero platforms. Fix: durable queue + worker.
 4. **SQLite + `create_all`, no migrations.** Breaks on the first schema change with data to keep. Fix: PostgreSQL + Alembic.
-5. **`GET /contracts` unpaginated** and loads every finding of every contract. Fine below ~1,000 contracts. Fix: cursor pagination + aggregate count query.
+5. **`GET /contracts` unpaginated**, and it loads every contract's text and every finding to count clause types (measured on the 6-contract demo DB: 2 queries thanks to `selectinload`, 7 without). Fix: load only the listed columns, count in SQL, cursor pagination on `created_at`.
 6. **No delete / soft delete, no ownership column.** Required before multi-user use.
 7. **Single LLM provider** (server-side fallback only covers refusals). No timeout budget per analysis beyond SDK defaults.
 8. **No observability:** unstructured logs, no metrics (latency, cost, failure rate), no tracing.

@@ -1,7 +1,7 @@
 """
 Contract review endpoints.
 
-Upload follows the "202 Accepted + polling" pattern: the analysis takes minutes, so the
+Upload follows the "202 Accepted + polling" pattern: the analysis takes tens of seconds, so the
 upload returns immediately with the contract id and the client polls GET /contracts/{id}
 until status is "done" or "failed".
 """
